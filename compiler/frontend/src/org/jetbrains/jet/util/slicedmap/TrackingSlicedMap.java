@@ -33,6 +33,7 @@ public class TrackingSlicedMap implements MutableSlicedMap {
 
     public TrackingSlicedMap(@NotNull MutableSlicedMap delegate) {
         this.delegate = delegate;
+        ((SlicedMapImpl) this.delegate).parent = this;
     }
 
     private <K, V> SliceWithStackTrace<K, V> wrapSlice(ReadOnlySlice<K, V> slice) {
@@ -91,15 +92,18 @@ public class TrackingSlicedMap implements MutableSlicedMap {
     private static class WithStackTrace<V> {
         private final V value;
         private final StackTraceElement[] stackTrace;
+        private final String threadName;
 
         private WithStackTrace(V value) {
             this.value = value;
             this.stackTrace = Thread.currentThread().getStackTrace();
+            this.threadName = Thread.currentThread().getName();
         }
 
         private Appendable printStackTrace(Appendable appendable) {
             Printer s = new Printer(appendable);
             s.println(value);
+            s.println("Thread: " + threadName);
             s.println("Written at ");
             StackTraceElement[] trace = stackTrace;
             for (StackTraceElement aTrace : trace) {

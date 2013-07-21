@@ -30,6 +30,8 @@ import java.util.Map;
 
 public class SlicedMapImpl implements MutableSlicedMap {
 
+    public MutableSlicedMap parent = null;
+
     public static SlicedMapImpl create() {
         return new SlicedMapImpl(Maps.<SlicedMapKey<?, ?>, Object>newLinkedHashMap());
     }
@@ -71,7 +73,7 @@ public class SlicedMapImpl implements MutableSlicedMap {
         }
 
         map.put(slicedMapKey, value);
-        slice.afterPut(this, key, value);
+        slice.afterPut(parent != null ? parent : this, key, value);
     }
 
     @Override
@@ -84,7 +86,7 @@ public class SlicedMapImpl implements MutableSlicedMap {
         SlicedMapKey<K, V> slicedMapKey = slice.makeKey(key);
         //noinspection unchecked
         V value = (V) map.get(slicedMapKey);
-        return slice.computeValue(this, key, value, value == null && !map.containsKey(slicedMapKey));
+        return slice.computeValue(parent != null ? parent : this, key, value, value == null && !map.containsKey(slicedMapKey));
     }
 
     @Override
