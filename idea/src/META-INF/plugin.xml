@@ -266,6 +266,8 @@
     <fileBasedIndex implementation="org.jetbrains.jet.plugin.versions.KotlinAbiVersionIndex"/>
     <fileBasedIndex implementation="org.jetbrains.jet.plugin.vfilefinder.KotlinClassFileIndex"/>
 
+    <clsStubBuilderFactory implementation="org.jetbrains.jet.lang.psi.stubs.builder.JetClsStubBuilderFactory"/>
+
     <contentBasedClassFileProcessor implementation="org.jetbrains.jet.plugin.libraries.JetContentBasedFileSubstitutor"/>
     <psi.clsCustomNavigationPolicy implementation="org.jetbrains.jet.plugin.libraries.JetClsNavigationPolicy"/>
     <psi.clsDecompiledFileProvider implementation="org.jetbrains.jet.plugin.libraries.JetClsFileDecompiledPsiFileProvider"/>
