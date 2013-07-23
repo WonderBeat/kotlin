@@ -35,6 +35,7 @@ import org.jetbrains.jet.lang.psi.JetClassOrObject;
 import org.jetbrains.jet.lang.psi.JetFile;
 import org.jetbrains.jet.lang.psi.JetPsiUtil;
 import org.jetbrains.jet.lang.resolve.java.PackageClassUtils;
+import org.jetbrains.jet.lang.resolve.java.resolver.KotlinClassFileHeader;
 import org.jetbrains.jet.lang.resolve.name.FqName;
 import org.jetbrains.jet.plugin.libraries.JetSourceNavigationHelper;
 import org.jetbrains.jet.plugin.stubindex.JetAllPackagesIndex;
@@ -125,7 +126,8 @@ public class IDELightClassGenerationSupport extends LightClassGenerationSupport 
     @Override
     public PsiClass getPsiClass(@NotNull JetClassOrObject classOrObject) {
         VirtualFile virtualFile = classOrObject.getContainingFile().getVirtualFile();
-        if (virtualFile != null && LibraryUtil.findLibraryEntry(virtualFile, classOrObject.getProject()) != null) {
+        if (virtualFile != null && (LibraryUtil.findLibraryEntry(virtualFile, classOrObject.getProject()) != null && KotlinClassFileHeader.readKotlinHeaderFromClassFile(virtualFile).getType() !=
+                                                                                                                     KotlinClassFileHeader.HeaderType.NONE)) {
             return JetSourceNavigationHelper.getOriginalClass(classOrObject);
         }
 

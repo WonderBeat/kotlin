@@ -17,11 +17,15 @@
 package org.jetbrains.jet.plugin.stubs;
 
 import com.intellij.lang.FileASTNode;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiFileFactory;
 import com.intellij.psi.impl.DebugUtil;
+import com.intellij.psi.impl.source.tree.LazyParseableElement;
 import com.intellij.psi.stubs.StubElement;
 import com.intellij.testFramework.LightProjectDescriptor;
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase;
+import com.intellij.util.LocalTimeCounter;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jet.lang.psi.JetClass;
@@ -30,6 +34,7 @@ import org.jetbrains.jet.lang.psi.JetFile;
 import org.jetbrains.jet.lang.psi.stubs.PsiJetClassStub;
 import org.jetbrains.jet.lang.psi.stubs.elements.JetFileStubBuilder;
 import org.jetbrains.jet.lang.psi.stubs.elements.JetStubElementTypes;
+import org.jetbrains.jet.lang.resolve.java.AnalyzerFacadeForJVM;
 import org.jetbrains.jet.plugin.JetFileType;
 import org.jetbrains.jet.plugin.JetLightProjectDescriptor;
 
@@ -227,17 +232,25 @@ public class JetStubsTest extends LightCodeInsightFixtureTestCase {
     }
 
     private void doBuildTest(@NonNls String source, @NonNls @NotNull String tree) {
-        JetFile file = (JetFile) createLightFile(JetFileType.INSTANCE, source);
+      //  LazyParseableElement.setParsingAllowed(false);
+        JetFile file = (JetFile) PsiFileFactory.getInstance(this.getProject())
+                .createFileFromText("a." + JetFileType.INSTANCE.getDefaultExtension(), JetFileType.INSTANCE, source, LocalTimeCounter.currentTime(), false, false);
         FileASTNode fileNode = file.getNode();
         assertNotNull(fileNode);
-        // assertFalse(fileNode.isParsed()); // TODO
+        assertFalse(fileNode.isParsed());
 
         JetFileStubBuilder jetStubBuilder = new JetFileStubBuilder();
 
         StubElement lighterTree = jetStubBuilder.buildStubTree(file);
-        // assertFalse(fileNode.isParsed()); // TODO
 
+      //  assertFalse(fileNode.isParsed()); // TODO
+      //  assertFalse(fileNode.isParsed()); // TODO
+      //  assertFalse(fileNode.isParsed()); // TODO
+
+        PsiElement psi = lighterTree.getPsi();
         String lightStr = DebugUtil.stubTreeToString(lighterTree);
+
+       // AnalyzerFacadeForJVM.analyzeOneFileWithJavaIntegration(file)
 
         assertEquals("light tree differs", tree, lightStr);
     }
