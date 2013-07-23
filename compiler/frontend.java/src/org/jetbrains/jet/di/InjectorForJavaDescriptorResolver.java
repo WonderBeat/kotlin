@@ -98,6 +98,7 @@ public class InjectorForJavaDescriptorResolver {
         this.javaBridgeConfiguration.setJavaSemanticServices(javaSemanticServices);
 
         this.javaSemanticServices.setDescriptorResolver(javaDescriptorResolver);
+        this.javaSemanticServices.setProject(project);
         this.javaSemanticServices.setPsiClassFinder(psiClassFinder);
         this.javaSemanticServices.setPsiDeclarationProviderFactory(psiDeclarationProviderFactory);
         this.javaSemanticServices.setTrace(bindingTrace);

@@ -16,6 +16,7 @@
 
 package org.jetbrains.jet.lang.resolve.java;
 
+import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jet.lang.descriptors.ClassDescriptor;
@@ -38,6 +39,18 @@ public class JavaSemanticServices {
     private BindingTrace trace;
     @NotNull
     private PsiDeclarationProviderFactory psiDeclarationProviderFactory;
+
+    //TODO: obvious hack
+    private Project project;
+
+    public Project getProject() {
+        return project;
+    }
+
+    @Inject
+    public void setProject(Project project) {
+        this.project = project;
+    }
 
     @Inject
     public void setTypeTransformer(@NotNull JavaTypeTransformer typeTransformer) {

@@ -94,6 +94,7 @@ public class InjectorForJavaSemanticServices {
         this.javaPropertyResolver = new JavaPropertyResolver();
 
         this.javaSemanticServices.setDescriptorResolver(javaDescriptorResolver);
+        this.javaSemanticServices.setProject(project);
         this.javaSemanticServices.setPsiClassFinder(psiClassFinder);
         this.javaSemanticServices.setPsiDeclarationProviderFactory(psiDeclarationProviderFactory);
         this.javaSemanticServices.setTrace(bindingTrace);
