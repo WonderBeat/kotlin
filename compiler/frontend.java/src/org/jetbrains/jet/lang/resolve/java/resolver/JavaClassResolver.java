@@ -207,19 +207,23 @@ public final class JavaClassResolver {
     }
 
     private ClassDescriptor doResolveClass(@NotNull FqName qualifiedName, @NotNull PostponedTasks tasks) {
-        ClassOrNamespaceDescriptor containingDeclaration = resolveParentDescriptor(qualifiedName);
-        // class may be resolved during resolution of parent
-        ClassDescriptor cachedDescriptor = classDescriptorCache.get(javaClassToKotlinFqName(qualifiedName));
-        if (cachedDescriptor != null) {
-            return cachedDescriptor;
-        }
-        assert (!unresolvedCache.contains(qualifiedName)) : "We can resolve the class, so it can't be 'unresolved' during parent resolution";
-
         Project project = semanticServices.getProject();
         VirtualFileFinder virtualFileFinder = ServiceManager.getService(project, VirtualFileFinder.class);
         //TODO: correct scope
         VirtualFile file = virtualFileFinder.find(qualifiedName, GlobalSearchScope.allScope(project));
         if (file != null) {
+            //TODO: code duplication
+            //TODO: it is a hackish way to determine whether it is inner class or not
+            boolean isInnerClass = file.getName().contains("$");
+            ClassOrNamespaceDescriptor containingDeclaration = resolveParentDescriptor(qualifiedName, isInnerClass);
+            // class may be resolved during resolution of parent
+            ClassDescriptor cachedDescriptor = classDescriptorCache.get(javaClassToKotlinFqName(qualifiedName));
+            if (cachedDescriptor != null) {
+                return cachedDescriptor;
+            }
+            assert (!unresolvedCache
+                    .contains(qualifiedName)) : "We can resolve the class, so it can't be 'unresolved' during parent resolution";
+
             ClassId id = ClassId.fromFqNameAndContainingDeclaration(qualifiedName, containingDeclaration);
             //TODO:
             //ErrorReporter reporter = DescriptorResolverUtils.createPsiBasedErrorReporter(psiClass, trace);
@@ -247,6 +251,15 @@ public final class JavaClassResolver {
         if (alreadyResolved != null) {
             return alreadyResolved;
         }
+        //TODO: code duplication
+        ClassOrNamespaceDescriptor containingDeclaration = resolveParentDescriptor(qualifiedName, isContainedInClass(psiClass));
+        // class may be resolved during resolution of parent
+        ClassDescriptor cachedDescriptor = classDescriptorCache.get(javaClassToKotlinFqName(qualifiedName));
+        if (cachedDescriptor != null) {
+            return cachedDescriptor;
+        }
+        assert (!unresolvedCache
+                .contains(qualifiedName)) : "We can resolve the class, so it can't be 'unresolved' during parent resolution";
 
         checkFqNamesAreConsistent(psiClass, qualifiedName);
         DescriptorResolverUtils.checkPsiClassIsNotJet(psiClass);
@@ -406,18 +419,23 @@ public final class JavaClassResolver {
     }
 
     @NotNull
-    private ClassOrNamespaceDescriptor resolveParentDescriptor(@NotNull FqName childClassFQName) {
+    private ClassOrNamespaceDescriptor resolveParentDescriptor(@NotNull FqName childClassFQName, boolean isInnerClass) {
         FqName parentFqName = childClassFQName.parent();
-        //TODO: why do we include kotlin here? what this flags means anyway?
-        NamespaceDescriptor parentNamespace = namespaceResolver.resolveNamespace(parentFqName, DescriptorSearchRule.INCLUDE_KOTLIN);
-        if (parentNamespace != null) {
+        if (isInnerClass) {
+            ClassDescriptor parentClass = resolveClass(parentFqName, DescriptorSearchRule.INCLUDE_KOTLIN);
+            if (parentClass == null) {
+                throw new IllegalStateException("Could not resolve " + parentFqName + " required to be parent for " + childClassFQName);
+            }
+            return parentClass;
+        }
+        else {
+            //TODO: why do we include kotlin here? what this flags means anyway?
+            NamespaceDescriptor parentNamespace = namespaceResolver.resolveNamespace(parentFqName, DescriptorSearchRule.INCLUDE_KOTLIN);
+            if (parentNamespace == null) {
+                throw new IllegalStateException("Could not resolve " + parentFqName + " required to be parent for " + childClassFQName);
+            }
             return parentNamespace;
         }
-        ClassDescriptor parentClass = resolveClass(parentFqName, DescriptorSearchRule.INCLUDE_KOTLIN);
-        if (parentClass == null) {
-            throw new IllegalStateException("Could not resolve " + parentFqName + " required to be parent for " + childClassFQName);
-        }
-        return parentClass;
     }
 
     // This method replaces "object" segments of FQ name to "<class-object-for-...>"
