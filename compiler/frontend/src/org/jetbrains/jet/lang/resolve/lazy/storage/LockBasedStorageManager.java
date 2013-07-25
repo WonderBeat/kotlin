@@ -19,6 +19,7 @@ package org.jetbrains.jet.lang.resolve.lazy.storage;
 import com.intellij.openapi.util.Computable;
 import com.intellij.util.Consumer;
 import com.intellij.util.Function;
+import com.intellij.util.PairFunction;
 import com.intellij.util.containers.ConcurrentWeakValueHashMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -58,6 +59,18 @@ public class LockBasedStorageManager implements StorageManager {
     ) {
         ConcurrentMap<K, Object> map = createConcurrentMap(valuesReferenceKind);
         return new MapBasedMemoizedFunction<K, V>(lock, map, compute);
+    }
+
+    @NotNull
+    @Override
+    public <R, K, V> MemoizedFunctionToNotNull<R, V> createRecountingMemoizedFunction(
+            @NotNull Function<R, V> compute,
+            @NotNull Function<R, K> keyProducer,
+            @NotNull PairFunction<R, V, Boolean> recountValueStrategy,
+            @NotNull ReferenceKind valuesReferenceKind
+    ) {
+        ConcurrentMap<K, Object> map = createConcurrentMap(valuesReferenceKind);
+        return new RecountingMapBasedMemoizedFunctionToNotNull<R, K, V>(lock, map, compute, keyProducer, recountValueStrategy);
     }
 
     private static <K, V> ConcurrentMap<K, V> createConcurrentMap(ReferenceKind referenceKind) {
@@ -106,6 +119,13 @@ public class LockBasedStorageManager implements StorageManager {
         // It seems safe to have a separate lock for traces:
         // no other locks will be acquired inside the trace operations
         return new LockProtectedTrace(lock, originalTrace);
+    }
+
+    @Override
+    public <T> T compute(@NotNull Computable<T> computable) {
+        synchronized (lock) {
+            return computable.compute();
+        }
     }
 
     private static class LockBasedLazyValue<T> implements NullableLazyValue<T> {
@@ -186,6 +206,68 @@ public class LockBasedStorageManager implements StorageManager {
 
                 return typedValue;
             }
+        }
+    }
+
+    private static class RecountingMapBasedMemoizedFunction<R, K, V> implements MemoizedFunctionToNullable<R, V> {
+        private final Object lock;
+        private final ConcurrentMap<K, Object> cache;
+        private final Function<R, V> compute;
+        private final Function<R, K> keyProducer;
+        private final PairFunction<R, V, Boolean> canUseValueStrategy;
+
+        public RecountingMapBasedMemoizedFunction(
+                @NotNull Object lock, @NotNull ConcurrentMap<K, Object> map,
+                @NotNull Function<R, V> compute,
+                @NotNull Function<R, K> keyProducer,
+                @NotNull PairFunction<R, V, Boolean> canUseValueStrategy
+        ) {
+            this.lock = lock;
+            this.cache = map;
+            this.compute = compute;
+            this.keyProducer = keyProducer;
+            this.canUseValueStrategy = canUseValueStrategy;
+        }
+
+        @Override
+        @Nullable
+        public V fun(@NotNull R input) {
+            synchronized (lock) {
+                K key = keyProducer.fun(input);
+                Object value = cache.get(key);
+                if (value != null) {
+                    V unescapedValue = Nulls.unescape(value);
+                    Boolean canUseValue = canUseValueStrategy.fun(input, unescapedValue);
+                    assert canUseValue != null;
+                    if (canUseValue) {
+                        return unescapedValue;
+                    }
+                }
+
+                V typedValue = compute.fun(input);
+
+                cache.put(key, Nulls.escape(typedValue));
+                return typedValue;
+            }
+        }
+    }
+
+    private static class RecountingMapBasedMemoizedFunctionToNotNull<R, K, V> extends RecountingMapBasedMemoizedFunction<R, K, V> implements MemoizedFunctionToNotNull<R, V> {
+        public RecountingMapBasedMemoizedFunctionToNotNull(
+                @NotNull Object lock, @NotNull ConcurrentMap<K, Object> map,
+                @NotNull Function<R, V> compute,
+                @NotNull Function<R, K> keyProducer,
+                @NotNull PairFunction<R, V, Boolean> canUseValueStrategy
+        ) {
+            super(lock, map, compute, keyProducer, canUseValueStrategy);
+        }
+
+        @NotNull
+        @Override
+        public V fun(@NotNull R input) {
+            V result = super.fun(input);
+            assert result != null : "compute() returned null";
+            return result;
         }
     }
 

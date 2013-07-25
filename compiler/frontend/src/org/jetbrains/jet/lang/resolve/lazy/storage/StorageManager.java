@@ -19,6 +19,7 @@ package org.jetbrains.jet.lang.resolve.lazy.storage;
 import com.intellij.openapi.util.Computable;
 import com.intellij.util.Consumer;
 import com.intellij.util.Function;
+import com.intellij.util.PairFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jet.lang.resolve.BindingTrace;
 
@@ -35,6 +36,14 @@ public interface StorageManager {
     <K, V> MemoizedFunctionToNotNull<K, V> createMemoizedFunction(@NotNull Function<K, V> compute, @NotNull ReferenceKind valuesReferenceKind);
     @NotNull
     <K, V> MemoizedFunctionToNullable<K, V> createMemoizedFunctionWithNullableValues(@NotNull Function<K, V> compute, @NotNull ReferenceKind valuesReferenceKind);
+
+    @NotNull
+    <R, K, V> MemoizedFunctionToNotNull<R, V> createRecountingMemoizedFunction(
+            @NotNull Function<R, V> compute,
+            @NotNull Function<R, K> keyProducer,
+            @NotNull PairFunction<R, V, Boolean> recountValueStrategy,
+            @NotNull ReferenceKind valuesReferenceKind
+    );
 
     @NotNull
     <T> NotNullLazyValue<T> createLazyValue(@NotNull Computable<T> computable);
@@ -58,6 +67,8 @@ public interface StorageManager {
 
     @NotNull
     BindingTrace createSafeTrace(@NotNull BindingTrace originalTrace);
+
+    <T> T compute(@NotNull Computable<T> computable);
 
     enum ReferenceKind {
         STRONG,
