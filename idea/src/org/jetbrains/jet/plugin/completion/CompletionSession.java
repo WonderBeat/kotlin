@@ -32,13 +32,12 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jet.lang.descriptors.*;
 import org.jetbrains.jet.lang.psi.*;
 import org.jetbrains.jet.lang.resolve.BindingContext;
-import org.jetbrains.jet.lang.resolve.lazy.ResolveSession;
-import org.jetbrains.jet.lang.resolve.lazy.ResolveSessionUtils;
 import org.jetbrains.jet.lang.resolve.scopes.JetScope;
 import org.jetbrains.jet.lexer.JetTokens;
 import org.jetbrains.jet.plugin.caches.JetShortNamesCache;
 import org.jetbrains.jet.plugin.codeInsight.TipsManager;
 import org.jetbrains.jet.plugin.completion.weigher.JetCompletionSorting;
+import org.jetbrains.jet.plugin.project.ResolveSessionResult;
 import org.jetbrains.jet.plugin.project.WholeProjectAnalyzerFacade;
 import org.jetbrains.jet.plugin.references.JetSimpleNameReference;
 
@@ -60,15 +59,15 @@ public class CompletionSession {
         this.parameters = parameters;
         this.jetReference = jetReference;
 
-        ResolveSession resolveSession = WholeProjectAnalyzerFacade.getLazyResolveSessionForFile((JetFile) position.getContainingFile());
-        BindingContext expressionBindingContext = ResolveSessionUtils.resolveToElement(resolveSession, jetReference.getExpression());
+        ResolveSessionResult sessionResult = WholeProjectAnalyzerFacade.getLazyResolveResultForFile((JetFile) position.getContainingFile());
+        BindingContext expressionBindingContext = sessionResult.resolveToElement(jetReference.getExpression());
         JetScope scope = expressionBindingContext.get(BindingContext.RESOLUTION_SCOPE, jetReference.getExpression());
 
         inDescriptor = scope != null ? scope.getContainingDeclaration() : null;
 
         this.jetResult = new JetCompletionResultSet(
                 JetCompletionSorting.addJetSorting(parameters, result),
-                resolveSession,
+                sessionResult,
                 expressionBindingContext, new Condition<DeclarationDescriptor>() {
             @Override
             public boolean value(DeclarationDescriptor descriptor) {
@@ -136,7 +135,7 @@ public class CompletionSession {
         Collection<DeclarationDescriptor> jetCallableExtensions = namesCache.getJetCallableExtensions(
                 jetResult.getShortNameFilter(),
                 jetReference.getExpression(),
-                getResolveSession(),
+                getResolveSessionResult(),
                 GlobalSearchScope.allScope(project));
 
         jetResult.addAllElements(jetCallableExtensions);
@@ -168,7 +167,7 @@ public class CompletionSession {
         for (String name : functionNames) {
             if (name.contains(actualPrefix)) {
                 jetResult.addAllElements(namesCache.getTopLevelFunctionDescriptorsByName(
-                        name, jetReference.getExpression(), getResolveSession(), scope));
+                        name, jetReference.getExpression(), getResolveSessionResult(), scope));
             }
         }
     }
@@ -181,7 +180,7 @@ public class CompletionSession {
 
         for (String name : objectNames) {
             if (jetResult.getResult().getPrefixMatcher().prefixMatches(name)) {
-                jetResult.addAllElements(namesCache.getTopLevelObjectsByName(name, jetReference.getExpression(), getResolveSession(), scope));
+                jetResult.addAllElements(namesCache.getTopLevelObjectsByName(name, jetReference.getExpression(), getResolveSessionResult(), scope));
             }
         }
     }
@@ -264,8 +263,8 @@ public class CompletionSession {
         return jetResult.getBindingContext();
     }
 
-    private ResolveSession getResolveSession() {
-        return jetResult.getResolveSession();
+    private ResolveSessionResult getResolveSessionResult() {
+        return jetResult.getSessionResult();
     }
 
     private PsiElement getPosition() {

@@ -23,10 +23,10 @@ import com.intellij.openapi.util.Conditions;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jet.lang.descriptors.DeclarationDescriptor;
 import org.jetbrains.jet.lang.resolve.BindingContext;
-import org.jetbrains.jet.lang.resolve.lazy.ResolveSession;
+import org.jetbrains.jet.plugin.project.ResolveSessionResult;
 
 public class JetCompletionResultSet {
-    private final ResolveSession resolveSession;
+    private final ResolveSessionResult sessionResult;
     private final BindingContext bindingContext;
     private final Condition<DeclarationDescriptor> descriptorFilter;
     private final CompletionResultSet result;
@@ -34,24 +34,24 @@ public class JetCompletionResultSet {
 
     public JetCompletionResultSet(
             @NotNull CompletionResultSet result,
-            @NotNull ResolveSession resolveSession,
+            @NotNull ResolveSessionResult sessionResult,
             @NotNull BindingContext bindingContext) {
-        this(result, resolveSession, bindingContext, Conditions.<DeclarationDescriptor>alwaysTrue());
+        this(result, sessionResult, bindingContext, Conditions.<DeclarationDescriptor>alwaysTrue());
     }
 
     public JetCompletionResultSet(
             @NotNull CompletionResultSet result,
-            @NotNull ResolveSession resolveSession,
+            @NotNull ResolveSessionResult sessionResult,
             @NotNull BindingContext bindingContext,
             @NotNull Condition<DeclarationDescriptor> descriptorFilter) {
         this.result = result;
-        this.resolveSession = resolveSession;
+        this.sessionResult = sessionResult;
         this.bindingContext = bindingContext;
         this.descriptorFilter = descriptorFilter;
     }
 
-    public ResolveSession getResolveSession() {
-        return resolveSession;
+    public ResolveSessionResult getSessionResult() {
+        return sessionResult;
     }
 
     public BindingContext getBindingContext() {
@@ -73,7 +73,7 @@ public class JetCompletionResultSet {
             return;
         }
 
-        addElement(DescriptorLookupConverter.createLookupElement(resolveSession, bindingContext, descriptor));
+        addElement(DescriptorLookupConverter.createLookupElement(sessionResult, bindingContext, descriptor));
     }
 
     public void addElement(@NotNull LookupElement element) {

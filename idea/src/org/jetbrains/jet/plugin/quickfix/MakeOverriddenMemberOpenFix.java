@@ -30,8 +30,8 @@ import org.jetbrains.jet.lang.diagnostics.Diagnostic;
 import org.jetbrains.jet.lang.psi.JetDeclaration;
 import org.jetbrains.jet.lang.psi.JetFile;
 import org.jetbrains.jet.lang.resolve.BindingContextUtils;
-import org.jetbrains.jet.lang.resolve.lazy.ResolveSession;
 import org.jetbrains.jet.plugin.JetBundle;
+import org.jetbrains.jet.plugin.project.ResolveSessionResult;
 import org.jetbrains.jet.plugin.project.WholeProjectAnalyzerFacade;
 
 import java.util.ArrayList;
@@ -58,14 +58,14 @@ public class MakeOverriddenMemberOpenFix extends JetIntentionAction<JetDeclarati
         overriddenMembers.clear();
         containingDeclarationsNames.clear();
 
-        ResolveSession resolveSession = WholeProjectAnalyzerFacade.getLazyResolveSessionForFile((JetFile) file);
-        DeclarationDescriptor descriptor = resolveSession.resolveToDescriptor(element);
+        ResolveSessionResult sessionResult = WholeProjectAnalyzerFacade.getLazyResolveResultForFile((JetFile) file);
+        DeclarationDescriptor descriptor = sessionResult.resolveToDescriptor(element);
         if (!(descriptor instanceof CallableMemberDescriptor)) return false;
         CallableMemberDescriptor callableMemberDescriptor = (CallableMemberDescriptor) descriptor;
         for (CallableMemberDescriptor overriddenDescriptor : callableMemberDescriptor.getOverriddenDescriptors()) {
             if (!overriddenDescriptor.getModality().isOverridable()) {
                 PsiElement overriddenMember =
-                        BindingContextUtils.descriptorToDeclaration(resolveSession.getBindingContext(), overriddenDescriptor);
+                        BindingContextUtils.descriptorToDeclaration(sessionResult.getBindingContext(), overriddenDescriptor);
                 if (overriddenMember == null || !QuickFixUtil.canModifyElement(overriddenMember)) {
                     return false;
                 }

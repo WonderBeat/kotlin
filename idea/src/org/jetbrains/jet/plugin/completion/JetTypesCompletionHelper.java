@@ -49,7 +49,7 @@ public class JetTypesCompletionHelper {
         Project project = parameters.getOriginalFile().getProject();
         JetShortNamesCache namesCache = JetShortNamesCache.getKotlinInstance(project);
         jetCompletionResult.addAllElements(namesCache.getJetClassesDescriptors(
-                jetCompletionResult.getShortNameFilter(), jetCompletionResult.getResolveSession(), GlobalSearchScope.allScope(project)));
+                jetCompletionResult.getShortNameFilter(), jetCompletionResult.getSessionResult(), GlobalSearchScope.allScope(project)));
 
         if (!KotlinFrameworkDetector.isJsKotlinModule((JetFile) parameters.getOriginalFile())) {
             addAdaptedJavaCompletion(parameters, jetCompletionResult);
@@ -98,7 +98,7 @@ public class JetTypesCompletionHelper {
                 if (qualifiedName != null) {
                     FqName fqName = new FqName(qualifiedName);
                     jetCompletionResult.addAllElements(
-                            ResolveSessionUtils.getClassDescriptorsByFqName(jetCompletionResult.getResolveSession(), fqName));
+                            ResolveSessionUtils.getClassDescriptorsByFqName(jetCompletionResult.getSessionResult(), fqName));
                 }
             }
 

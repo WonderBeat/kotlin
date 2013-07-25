@@ -40,7 +40,6 @@ import org.jetbrains.jet.lang.resolve.BindingTraceContext;
 import org.jetbrains.jet.lang.resolve.ImportPath;
 import org.jetbrains.jet.lang.resolve.QualifiedExpressionResolver;
 import org.jetbrains.jet.lang.resolve.lazy.KotlinCodeAnalyzer;
-import org.jetbrains.jet.lang.resolve.lazy.ResolveSession;
 import org.jetbrains.jet.lang.resolve.lazy.ResolveSessionUtils;
 import org.jetbrains.jet.lang.resolve.name.FqName;
 import org.jetbrains.jet.lang.resolve.name.Name;
@@ -49,6 +48,7 @@ import org.jetbrains.jet.lang.types.ErrorUtils;
 import org.jetbrains.jet.lang.types.JetType;
 import org.jetbrains.jet.lang.types.expressions.ExpressionTypingUtils;
 import org.jetbrains.jet.plugin.caches.resolve.IDELightClassGenerationSupport;
+import org.jetbrains.jet.plugin.project.ResolveSessionResult;
 import org.jetbrains.jet.plugin.stubindex.*;
 
 import java.util.*;
@@ -177,10 +177,10 @@ public class JetShortNamesCache extends PsiShortNamesCache {
     public Collection<ClassDescriptor> getTopLevelObjectsByName(
             @NotNull String name,
             @NotNull JetSimpleNameExpression expression,
-            @NotNull ResolveSession resolveSession,
+            @NotNull ResolveSessionResult sessionResult,
             @NotNull GlobalSearchScope scope
     ) {
-        BindingContext context = ResolveSessionUtils.resolveToElement(resolveSession, expression);
+        BindingContext context = sessionResult.resolveToElement(expression);
         JetScope jetScope = context.get(BindingContext.RESOLUTION_SCOPE, expression);
 
         if (jetScope == null) {
@@ -193,7 +193,7 @@ public class JetShortNamesCache extends PsiShortNamesCache {
         for (JetObjectDeclaration objectDeclaration : topObjects) {
             FqName fqName = JetPsiUtil.getFQName(objectDeclaration);
             assert fqName != null : "Local object declaration in JetTopLevelShortObjectNameIndex:" + objectDeclaration.getText();
-            result.addAll(ResolveSessionUtils.getClassOrObjectDescriptorsByFqName(resolveSession, fqName, true));
+            result.addAll(ResolveSessionUtils.getClassOrObjectDescriptorsByFqName(sessionResult, fqName, true));
         }
 
         for (PsiClass psiClass : JetFromJavaDescriptorHelper
@@ -201,7 +201,7 @@ public class JetShortNamesCache extends PsiShortNamesCache {
             String qualifiedName = psiClass.getQualifiedName();
             if (qualifiedName != null) {
                 FqName fqName = new FqName(qualifiedName);
-                result.addAll(ResolveSessionUtils.getClassOrObjectDescriptorsByFqName(resolveSession, fqName, true));
+                result.addAll(ResolveSessionUtils.getClassOrObjectDescriptorsByFqName(sessionResult, fqName, true));
             }
         }
 
@@ -212,7 +212,7 @@ public class JetShortNamesCache extends PsiShortNamesCache {
     public Collection<FunctionDescriptor> getTopLevelFunctionDescriptorsByName(
             @NotNull String name,
             @NotNull JetSimpleNameExpression expression,
-            @NotNull ResolveSession resolveSession,
+            @NotNull ResolveSessionResult sessionResult,
             @NotNull GlobalSearchScope scope
     ) {
         // name parameter can differ from expression.getReferenceName() when expression contains completion suffix
@@ -221,7 +221,7 @@ public class JetShortNamesCache extends PsiShortNamesCache {
             return Collections.emptyList();
         }
 
-        BindingContext context = ResolveSessionUtils.resolveToElement(resolveSession, expression);
+        BindingContext context = sessionResult.resolveToElement(expression);
         JetScope jetScope = context.get(BindingContext.RESOLUTION_SCOPE, expression);
 
         if (jetScope == null) {
@@ -237,7 +237,7 @@ public class JetShortNamesCache extends PsiShortNamesCache {
             if (functionFQN != null) {
                 JetImportDirective importDirective = JetPsiFactory.createImportDirective(project, new ImportPath(functionFQN, false));
                 Collection<? extends DeclarationDescriptor> declarationDescriptors = new QualifiedExpressionResolver().analyseImportReference(
-                        importDirective, jetScope, new BindingTraceContext(), resolveSession.getRootModuleDescriptor());
+                        importDirective, jetScope, new BindingTraceContext(), sessionResult.getRootModuleDescriptor());
                 for (DeclarationDescriptor declarationDescriptor : declarationDescriptors) {
                     if (declarationDescriptor instanceof FunctionDescriptor) {
                         result.add((FunctionDescriptor) declarationDescriptor);
@@ -260,7 +260,7 @@ public class JetShortNamesCache extends PsiShortNamesCache {
         }
 
         for (FqName affectedPackage : affectedPackages) {
-            NamespaceDescriptor packageDescriptor = resolveSession.getPackageDescriptorByFqName(affectedPackage);
+            NamespaceDescriptor packageDescriptor = sessionResult.getPackageDescriptorByFqName(affectedPackage);
             assert packageDescriptor != null : "There's a function in stub index with invalid package: " + affectedPackage;
             JetScope memberScope = packageDescriptor.getMemberScope();
             result.addAll(memberScope.getFunctions(referenceName));
@@ -297,12 +297,12 @@ public class JetShortNamesCache extends PsiShortNamesCache {
     public Collection<DeclarationDescriptor> getJetCallableExtensions(
             @NotNull Condition<String> acceptedNameCondition,
             @NotNull JetSimpleNameExpression expression,
-            @NotNull ResolveSession resolveSession,
+            @NotNull ResolveSessionResult sessionResult,
             @NotNull GlobalSearchScope searchScope
     ) {
         Collection<DeclarationDescriptor> resultDescriptors = new ArrayList<DeclarationDescriptor>();
 
-        BindingContext context = ResolveSessionUtils.resolveToElement(resolveSession, expression);
+        BindingContext context = sessionResult.resolveToElement(expression);
         JetExpression receiverExpression = expression.getReceiverExpression();
 
         if (receiverExpression != null) {
@@ -336,7 +336,7 @@ public class JetShortNamesCache extends PsiShortNamesCache {
                 // Iterate through the function with attempt to resolve found functions
                 for (FqName functionFQN : functionFQNs) {
                     for (CallableDescriptor functionDescriptor : ExpressionTypingUtils.canFindSuitableCall(
-                            functionFQN, project, receiverExpression, expressionType, scope, resolveSession.getRootModuleDescriptor())) {
+                            functionFQN, project, receiverExpression, expressionType, scope, sessionResult.getRootModuleDescriptor())) {
 
                         resultDescriptors.add(functionDescriptor);
                     }
